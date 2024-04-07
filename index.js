@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 
-/**
- * Module dependencies.
- */
-
+import dotenv from 'dotenv'
 import app from './src/app.js'
 import debugLogger from 'debug'
 import http from 'http'
+
+dotenv.config()
+
+/**
+ * Module dependencies.
+ */
 
 const debug = debugLogger('mco2-server-app:server')
 
