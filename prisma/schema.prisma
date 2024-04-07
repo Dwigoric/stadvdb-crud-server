@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model appointments_luzon {
+  pxid       String?   @db.Char(32)
+  clinicid   String?   @db.Char(32)
+  doctorid   String?   @db.Char(32)
+  apptid     String    @id @db.Char(32)
+  status     String?   @db.Text
+  TimeQueued DateTime? @db.DateTime(0)
+  QueueDate  DateTime? @db.DateTime(0)
+  StartTime  DateTime? @db.DateTime(0)
+  EndTime    DateTime? @db.DateTime(0)
+  type       String?   @db.Text
+  isVirtual  String?   @db.Text
+  City       String?   @db.Text
+  Province   String?   @db.Text
+  RegionName String?   @db.VarChar(255)
+}
+
+model appointments_vismin {
+  pxid       String?   @db.Char(32)
+  clinicid   String?   @db.Char(32)
+  doctorid   String?   @db.Char(32)
+  apptid     String    @id @db.Char(32)
+  status     String?   @db.Text
+  TimeQueued DateTime? @db.DateTime(0)
+  QueueDate  DateTime? @db.DateTime(0)
+  StartTime  DateTime? @db.DateTime(0)
+  EndTime    DateTime? @db.DateTime(0)
+  type       String?   @db.Text
+  isVirtual  String?   @db.Text
+  City       String?   @db.Text
+  Province   String?   @db.Text
+  RegionName String?   @db.VarChar(255)
+}
