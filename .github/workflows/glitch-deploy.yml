@@ -1,15 +1,18 @@
-on: 
- - push
+on:
+  push:
+    branches:
+      - main
+
 jobs:
   repo-sync:
     runs-on: ubuntu-latest
     steps:
     - name: repo-sync
-      uses: wei/git-sync@v1
+      uses: wei/git-sync@v3
       env:
-        SOURCE_REPO: "https://github.com/Dwigoric/stadvdb-crud-server.git"
-        SOURCE_BRANCH: "master"
+        SOURCE_REPO: https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        SOURCE_BRANCH: main
         DESTINATION_REPO: ${{ secrets.glitch_git_URL }}
-        DESTINATION_BRANCH: "master"
+        DESTINATION_BRANCH: master
       with:
         args: $SOURCE_REPO $SOURCE_BRANCH $DESTINATION_REPO $DESTINATION_BRANCH
