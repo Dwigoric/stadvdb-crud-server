@@ -74,7 +74,7 @@ router.get('/appointment/:id', async function(req, res) {
         // Find it in Vismin first
         let appointment = await readVismin.appointments_vismin.findUnique({
             where: {
-                id: req.params.id
+                apptid: req.params.id
             }
         })
 
@@ -82,7 +82,7 @@ router.get('/appointment/:id', async function(req, res) {
             // Find it in Luzon
             appointment = await readLuzon.appointments_luzon.findUnique({
                 where: {
-                    id: req.params.id
+                    apptid: req.params.id
                 }
             })
         }
@@ -257,14 +257,14 @@ router.delete('/appointment/:id', async function(req, res) {
 
         const appointment = await master.appointments_luzon.delete({
             where: {
-                id: req.params.id
+                apptid: req.params.id
             }
         })
 
         if (!appointment) {
             await master.appointments_vismin.delete({
                 where: {
-                    id: req.params.id
+                    apptid: req.params.id
                 }
             })
         }
