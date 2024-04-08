@@ -4,7 +4,7 @@ import debugLogger from 'debug'
 import prismaClientPkg from '@prisma/client'
 
 const debug = debugLogger('mco2-server-app:db')
-const { PrismaClient, Prisma: { Sql } } = prismaClientPkg
+const { PrismaClient } = prismaClientPkg
 
 const router = Router()
 
@@ -18,48 +18,53 @@ const readVismin = new PrismaClient({ datasources: { db: { url: process.env.VISM
 // Source: https://github.com/prisma/prisma/issues/2443#issuecomment-630679118
 
 let masterAvailable = true
-let luzonNode = readLuzon
-let visminNode = readVismin
+let luzonAvailable = true
+let visminAvailable = true
 
-const roundRobin = setInterval(async () => {
+await checkNodes()
+const roundRobin = setInterval(checkNodes, 10_000) // every 10 seconds
+
+router.get('/', function(req, res) {
+    res.send('Hello there!')
+})
+
+export default router
+
+async function checkNodes() {
     // Check Master
     try {
-        await master.$queryRaw(Sql`SELECT 1`)
+        await master.$queryRaw`SELECT 1`
         // Stay on Master
         masterAvailable = true
     } catch (e) {
         debug('Master is down')
+        debug(e)
+
         masterAvailable = false
         // Revert to Luzon and Vismin replicas
-        luzonNode = readLuzon
-        visminNode = readVismin
+        luzonAvailable = true
+        visminAvailable = true
     }
 
     // Check Luzon, fallback to Master
     try {
-        await luzonNode.$queryRaw(Sql`SELECT 1`)
+        await readLuzon.$queryRaw`SELECT 1`
         // Stay/switch to Luzon
-        luzonNode = readLuzon
+        luzonAvailable = true
     } catch (e) {
-        debug('Luzon is down, falling back to master')
-        luzonNode = master
+        debug('Luzon is down')
+        debug(e)
+        luzonAvailable = false
     }
 
     // Check Vismin, fallback to Master
     try {
-        await visminNode.$queryRaw(Sql`SELECT 1`)
+        await readVismin.$queryRaw`SELECT 1`
         // Stay/switch to Vismin
-        visminNode = readVismin
+        visminAvailable = true
     } catch (e) {
-        debug('Vismin is down, falling back to master')
-        visminNode = master
+        debug('Vismin is down')
+        debug(e)
+        visminAvailable = false
     }
-}, 10_000) // every 10 seconds
-
-router.get('/', function(req, res, next) {
-    res.send('Hello there!')
-})
-
-// TODO: Add routes for CRUD operations
-
-export default router
+}
