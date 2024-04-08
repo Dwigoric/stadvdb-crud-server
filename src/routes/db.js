@@ -47,7 +47,35 @@ router.get('/status', function(req, res) {
     })
 })
 
-// Get all appointments
+// Get Luzon appointments
+router.get('appointments/luzon/:offset?', async function(req, res) {
+    try {
+        const appointments = await readLuzon.appointments_luzon.findMany({
+            take: 500,
+            skip: req.params.offset ? parseInt(req.params.offset) : 0
+        })
+
+        res.status(200).send(appointments)
+    } catch (e) {
+        res.status(500).send(e)
+    }
+})
+
+// Get Vismin appointments
+router.get('appointments/vismin/:offset?', async function(req, res) {
+    try {
+        const appointments = await readVismin.appointments_vismin.findMany({
+            take: 500,
+            skip: req.params.offset ? parseInt(req.params.offset) : 0
+        })
+
+        res.status(200).send(appointments)
+    } catch (e) {
+        res.status(500).send(e)
+    }
+})
+
+// Get appointments from both Luzon and Vismin
 router.get('/appointments/:offset?', async function(req, res) {
     try {
         // Collect from both Luzon and Vismin
