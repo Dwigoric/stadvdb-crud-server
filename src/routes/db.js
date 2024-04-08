@@ -1,7 +1,9 @@
 // Package imports
 import { Router } from 'express'
+import debugLogger from 'debug'
 import prismaClientPkg from '@prisma/client'
 
+const debug = debugLogger('mco2-server-app:db')
 const { PrismaClient, Prisma: { Sql } } = prismaClientPkg
 
 const router = Router()
@@ -26,7 +28,7 @@ const roundRobin = setInterval(async () => {
         // Stay on Master
         masterAvailable = true
     } catch (e) {
-        console.error('Master is down')
+        debug('Master is down')
         masterAvailable = false
         // Revert to Luzon and Vismin replicas
         luzonNode = readLuzon
@@ -39,7 +41,7 @@ const roundRobin = setInterval(async () => {
         // Stay/switch to Luzon
         luzonNode = readLuzon
     } catch (e) {
-        console.error('Luzon is down, falling back to master')
+        debug('Luzon is down, falling back to master')
         luzonNode = master
     }
 
@@ -49,7 +51,7 @@ const roundRobin = setInterval(async () => {
         // Stay/switch to Vismin
         visminNode = readVismin
     } catch (e) {
-        console.error('Vismin is down, falling back to master')
+        debug('Vismin is down, falling back to master')
         visminNode = master
     }
 }, 10_000) // every 10 seconds
