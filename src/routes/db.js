@@ -122,26 +122,25 @@ router.put('/appointment', async function(req, res) {
             Province,
             RegionName
         } = req.body
+        const data = {
+            pxid,
+            clinicid,
+            doctorid,
+            status,
+            TimeQueued,
+            QueueDate,
+            StartTime,
+            EndTime,
+            type,
+            isVirtual,
+            City,
+            Province,
+            RegionName
+        }
 
         const table = regionsInLuzon.includes(RegionName) ? 'appointments_luzon' : 'appointments_vismin'
 
-        master[table].create({
-            data: {
-                pxid,
-                clinicid,
-                doctorid,
-                status,
-                TimeQueued,
-                QueueDate,
-                StartTime,
-                EndTime,
-                type,
-                isVirtual,
-                City,
-                Province,
-                RegionName
-            }
-        })
+        master[table].create({ data })
 
         res.status(201).send('Appointment created')
     } catch (e) {
@@ -173,29 +172,73 @@ router.patch('/appointment/:id', async function(req, res) {
             Province,
             RegionName
         } = req.body
+        const data = {
+            pxid,
+            clinicid,
+            doctorid,
+            status,
+            TimeQueued,
+            QueueDate,
+            StartTime,
+            EndTime,
+            type,
+            isVirtual,
+            City,
+            Province,
+            RegionName
+        }
 
-        const table = regionsInLuzon.includes(RegionName) ? 'appointments_luzon' : 'appointments_vismin'
-
-        master[table].update({
+        // Check if appointment exists
+        let appointment = await master.appointments_luzon.findUnique({
             where: {
-                id: req.params.id
-            },
-            data: {
-                pxid,
-                clinicid,
-                doctorid,
-                status,
-                TimeQueued,
-                QueueDate,
-                StartTime,
-                EndTime,
-                type,
-                isVirtual,
-                City,
-                Province,
-                RegionName
+                apptid: req.params.id
             }
         })
+
+        if (!appointment) {
+            appointment = await master.appointments_vismin.findUnique({
+                where: {
+                    apptid: req.params.id
+                }
+            })
+        }
+
+        if (!appointment) {
+            res.status(404).send('Appointment not found')
+            return
+        }
+
+        // Check if the RegionName has changed between Luzon and Vismin
+        if (appointment.RegionName !== RegionName) {
+            // If the new region is from the other region,
+            // delete the entry from the old region and create a new one in the new region
+            const oldTable = regionsInLuzon.includes(appointment.RegionName) ? 'appointments_luzon' : 'appointments_vismin'
+            const newTable = regionsInLuzon.includes(RegionName) ? 'appointments_luzon' : 'appointments_vismin'
+
+            if (oldTable === newTable) {
+                // If the region is the same, just update the entry
+                await master[oldTable].update({
+                    where: { apptid: req.params.id },
+                    data
+                })
+            } else {
+                // Delete the old appointment
+                await master[oldTable].delete({
+                    where: { apptid: req.params.id }
+                })
+
+                // Create a new appointment
+                await master[newTable].create({ data })
+            }
+        } else {
+            // Update the appointment
+            const table = regionsInLuzon.includes(RegionName) ? 'appointments_luzon' : 'appointments_vismin'
+
+            await master[table].update({
+                where: { apptid: req.params.id },
+                data
+            })
+        }
 
         res.status(200).send('Appointment updated')
     } catch (e) {
