@@ -6,7 +6,7 @@
     "scripts": {
         "start": "node index.js",
         "watch": "nodemon --watch src index.js",
-        "prisma-generate": "pnpify prisma generate"
+        "postinstall": "pnpify prisma generate"
     },
     "dependencies": {
         "@prisma/client": "^5.12.1",
