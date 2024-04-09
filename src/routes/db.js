@@ -24,7 +24,7 @@ let visminAvailable = true
 
 // Check status of nodes
 await checkNodes()
-const roundRobin = setInterval(checkNodes, 10_000) // every 10 seconds
+const roundRobin = setInterval(checkNodes, 5_000) // every 5 seconds
 
 // Constants
 const regionsInLuzon = [
