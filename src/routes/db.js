@@ -137,8 +137,8 @@ router.get('/appointments', async function(req, res) {
         // Merge the two arrays
         appointments = appointments[0].concat(appointments[1])
 
-        // Sort appointments by TimeQueued
-        appointments.sort((a, b) => a.TimeQueued - b.TimeQueued)
+        // Sort appointments apptid
+        appointments.sort((a, b) => a.apptid.localeCompare(b.apptid))
 
         // Only take the first itemsPerPage elements
         appointments = appointments.slice(0, itemsPerPage)
