@@ -50,7 +50,7 @@ const generateRandomID = () => {
 }
 
 // Check status
-router.get('status', function(req, res) {
+router.get('/status', function(req, res) {
     res.status(200).send({
         master: masterAvailable,
         luzon: luzonAvailable,
@@ -59,7 +59,7 @@ router.get('status', function(req, res) {
 })
 
 // Get Luzon appointments
-router.get('appointments/luzon', async function(req, res) {
+router.get('/appointments/luzon', async function(req, res) {
     const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
     const page = req.query.page ? parseInt(req.query.page) : 0
 
@@ -76,7 +76,7 @@ router.get('appointments/luzon', async function(req, res) {
 })
 
 // Get Vismin appointments
-router.get('appointments/vismin', async function(req, res) {
+router.get('/appointments/vismin', async function(req, res) {
     const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
     const page = req.query.page ? parseInt(req.query.page) : 0
 
