@@ -36,10 +36,6 @@ jobs:
           echo 'Install dependencies'
           yarn install --immutable
 
-      - name: Generate Prisma client
-        run: |
-          yarn run prisma-generate
-
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
