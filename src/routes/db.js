@@ -123,7 +123,7 @@ router.get('/appointments', async function(req, res) {
 
     try {
         // Collect from both Luzon and Vismin
-        const appointments = await Promise.all([
+        let appointments = await Promise.all([
             readLuzon.appointments_luzon.findMany({
                 take: itemsPerPage,
                 skip: page * itemsPerPage
@@ -134,8 +134,14 @@ router.get('/appointments', async function(req, res) {
             })
         ])
 
+        // Merge the two arrays
+        appointments = appointments[0].concat(appointments[1])
+
         // Sort appointments by TimeQueued
         appointments.sort((a, b) => a.TimeQueued - b.TimeQueued)
+
+        // Only take the first itemsPerPage elements
+        appointments = appointments.slice(0, itemsPerPage)
 
         res.status(200).send(appointments)
     } catch (e) {
