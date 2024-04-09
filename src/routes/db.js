@@ -257,9 +257,6 @@ router.patch('/appointment/:id', async function(req, res) {
         }
 
         const {
-            pxid,
-            clinicid,
-            doctorid,
             status,
             TimeQueued,
             QueueDate,
@@ -272,9 +269,6 @@ router.patch('/appointment/:id', async function(req, res) {
             RegionName
         } = req.body
         const data = {
-            pxid,
-            clinicid,
-            doctorid,
             status,
             TimeQueued,
             QueueDate,
