@@ -39,7 +39,7 @@ const regionsInLuzon = [
 ]
 
 // Check status
-router.get('/status', function(req, res) {
+router.get('status', function(req, res) {
     res.status(200).send({
         master: masterAvailable,
         luzon: luzonAvailable,
@@ -48,11 +48,14 @@ router.get('/status', function(req, res) {
 })
 
 // Get Luzon appointments
-router.get('appointments/luzon/:offset?', async function(req, res) {
+router.get('appointments/luzon', async function(req, res) {
+    const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
+    const page = req.query.page ? parseInt(req.query.page) : 0
+
     try {
         const appointments = await readLuzon.appointments_luzon.findMany({
-            take: 500,
-            skip: req.params.offset ? parseInt(req.params.offset) : 0
+            take: itemsPerPage,
+            skip: page * itemsPerPage
         })
 
         res.status(200).send(appointments)
@@ -62,11 +65,14 @@ router.get('appointments/luzon/:offset?', async function(req, res) {
 })
 
 // Get Vismin appointments
-router.get('appointments/vismin/:offset?', async function(req, res) {
+router.get('appointments/vismin', async function(req, res) {
+    const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
+    const page = req.query.page ? parseInt(req.query.page) : 0
+
     try {
         const appointments = await readVismin.appointments_vismin.findMany({
-            take: 500,
-            skip: req.params.offset ? parseInt(req.params.offset) : 0
+            take: itemsPerPage,
+            skip: page * itemsPerPage
         })
 
         res.status(200).send(appointments)
@@ -76,19 +82,25 @@ router.get('appointments/vismin/:offset?', async function(req, res) {
 })
 
 // Get appointments from both Luzon and Vismin
-router.get('/appointments/:offset?', async function(req, res) {
+router.get('/appointments', async function(req, res) {
+    const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
+    const page = req.query.page ? parseInt(req.query.page) : 0
+
     try {
         // Collect from both Luzon and Vismin
         const appointments = await Promise.all([
             readLuzon.appointments_luzon.findMany({
-                take: 500,
-                skip: req.params.offset ? parseInt(req.params.offset) : 0
+                take: itemsPerPage,
+                skip: page * itemsPerPage
             }),
             readVismin.appointments_vismin.findMany({
-                take: 500,
-                skip: req.params.offset ? parseInt(req.params.offset) : 0
+                take: itemsPerPage,
+                skip: page * itemsPerPage
             })
         ])
+
+        // Sort appointments by TimeQueued
+        appointments.sort((a, b) => a.TimeQueued - b.TimeQueued)
 
         res.status(200).send(appointments)
     } catch (e) {
