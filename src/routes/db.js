@@ -65,8 +65,15 @@ router.get('/appointments/luzon', async function(req, res) {
     const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
     const page = req.query.page ? parseInt(req.query.page) : 0
 
+    const luzonNode = getReadNode('luzon')
+
+    if (!luzonNode) {
+        res.status(503).send('Data is currently unavailable')
+        return
+    }
+
     try {
-        const appointments = await readLuzon.appointments_luzon.findMany({
+        const appointments = await luzonNode.appointments_luzon.findMany({
             take: itemsPerPage,
             skip: page * itemsPerPage
         })
@@ -79,8 +86,15 @@ router.get('/appointments/luzon', async function(req, res) {
 
 // Get total size of Luzon appointments
 router.get('/appointments/luzon/size', async function(req, res) {
+    const luzonNode = getReadNode('luzon')
+
+    if (!luzonNode) {
+        res.status(503).send('Data is currently unavailable')
+        return
+    }
+
     try {
-        const size = await readLuzon.appointments_luzon.count()
+        const size = await luzonNode.appointments_luzon.count()
 
         res.status(200).send({ size })
     } catch (e) {
@@ -93,8 +107,15 @@ router.get('/appointments/vismin', async function(req, res) {
     const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
     const page = req.query.page ? parseInt(req.query.page) : 0
 
+    const visminNode = getReadNode('vismin')
+
+    if (!visminNode) {
+        res.status(503).send('Data is currently unavailable')
+        return
+    }
+
     try {
-        const appointments = await readVismin.appointments_vismin.findMany({
+        const appointments = await visminNode.appointments_vismin.findMany({
             take: itemsPerPage,
             skip: page * itemsPerPage
         })
@@ -107,8 +128,15 @@ router.get('/appointments/vismin', async function(req, res) {
 
 // Get total size of Vismin appointments
 router.get('/appointments/vismin/size', async function(req, res) {
+    const visminNode = getReadNode('vismin')
+
+    if (!visminNode) {
+        res.status(503).send('Data is currently unavailable')
+        return
+    }
+
     try {
-        const size = await readVismin.appointments_vismin.count()
+        const size = await visminNode.appointments_vismin.count()
 
         res.status(200).send({ size })
     } catch (e) {
@@ -121,14 +149,22 @@ router.get('/appointments', async function(req, res) {
     const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
     const page = req.query.page ? parseInt(req.query.page) : 0
 
+    const luzonNode = getReadNode('luzon')
+    const visminNode = getReadNode('vismin')
+
+    if (!luzonNode || !visminNode) {
+        res.status(503).send('Data is currently unavailable')
+        return
+    }
+
     try {
         // Collect from both Luzon and Vismin
         let appointments = await Promise.all([
-            readLuzon.appointments_luzon.findMany({
+            luzonNode.appointments_luzon.findMany({
                 take: itemsPerPage,
                 skip: page * itemsPerPage
             }),
-            readVismin.appointments_vismin.findMany({
+            visminNode.appointments_vismin.findMany({
                 take: itemsPerPage,
                 skip: page * itemsPerPage
             })
@@ -151,11 +187,19 @@ router.get('/appointments', async function(req, res) {
 
 // Get total size of appointments from both Luzon and Vismin
 router.get('/appointments/size', async function(req, res) {
+    const luzonNode = getReadNode('luzon')
+    const visminNode = getReadNode('vismin')
+
+    if (!luzonNode || !visminNode) {
+        res.status(503).send('Data is currently unavailable')
+        return
+    }
+
     try {
         // Collect from both Luzon and Vismin
         const sizes = await Promise.all([
-            readLuzon.appointments_luzon.count(),
-            readVismin.appointments_vismin.count()
+            luzonNode.appointments_luzon.count(),
+            visminNode.appointments_vismin.count()
         ])
 
         const size = sizes.reduce((acc, curr) => acc + curr, 0)
@@ -168,9 +212,17 @@ router.get('/appointments/size', async function(req, res) {
 
 // Get an appointment
 router.get('/appointment/:id', async function(req, res) {
+    const luzonNode = getReadNode('luzon')
+    const visminNode = getReadNode('vismin')
+
+    if (!luzonNode || !visminNode) {
+        res.status(503).send('Data is currently unavailable')
+        return
+    }
+
     try {
-        // Find it in Vismin first
-        let appointment = await readVismin.appointments_vismin.findUnique({
+        // Find it in Vismin first because it has less data
+        let appointment = await visminNode.appointments_vismin.findUnique({
             where: {
                 apptid: req.params.id
             }
@@ -178,7 +230,7 @@ router.get('/appointment/:id', async function(req, res) {
 
         if (!appointment) {
             // Find it in Luzon
-            appointment = await readLuzon.appointments_luzon.findUnique({
+            appointment = await luzonNode.appointments_luzon.findUnique({
                 where: {
                     apptid: req.params.id
                 }
@@ -406,5 +458,15 @@ async function checkNodes() {
         debug('Vismin is down')
         debug(e)
         visminAvailable = false
+    }
+}
+
+function getReadNode(region) {
+    if (region === 'luzon') {
+        return luzonAvailable ? readLuzon : masterAvailable ? master : null
+    } else if (region === 'vismin') {
+        return visminAvailable ? readVismin : masterAvailable ? master : null
+    } else {
+        return null
     }
 }
