@@ -75,6 +75,17 @@ router.get('/appointments/luzon', async function(req, res) {
     }
 })
 
+// Get total size of Luzon appointments
+router.get('/appointments/luzon/size', async function(req, res) {
+    try {
+        const size = await readLuzon.appointments_luzon.count()
+
+        res.status(200).send({ size })
+    } catch (e) {
+        res.status(500).send(e)
+    }
+})
+
 // Get Vismin appointments
 router.get('/appointments/vismin', async function(req, res) {
     const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
@@ -87,6 +98,17 @@ router.get('/appointments/vismin', async function(req, res) {
         })
 
         res.status(200).send(appointments)
+    } catch (e) {
+        res.status(500).send(e)
+    }
+})
+
+// Get total size of Vismin appointments
+router.get('/appointments/vismin/size', async function(req, res) {
+    try {
+        const size = await readVismin.appointments_vismin.count()
+
+        res.status(200).send({ size })
     } catch (e) {
         res.status(500).send(e)
     }
@@ -114,6 +136,23 @@ router.get('/appointments', async function(req, res) {
         appointments.sort((a, b) => a.TimeQueued - b.TimeQueued)
 
         res.status(200).send(appointments)
+    } catch (e) {
+        res.status(500).send(e)
+    }
+})
+
+// Get total size of appointments from both Luzon and Vismin
+router.get('/appointments/size', async function(req, res) {
+    try {
+        // Collect from both Luzon and Vismin
+        const sizes = await Promise.all([
+            readLuzon.appointments_luzon.count(),
+            readVismin.appointments_vismin.count()
+        ])
+
+        const size = sizes.reduce((acc, curr) => acc + curr, 0)
+
+        res.status(200).send({ size })
     } catch (e) {
         res.status(500).send(e)
     }
