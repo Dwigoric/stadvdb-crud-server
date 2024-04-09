@@ -241,7 +241,7 @@ router.put('/appointment', async function(req, res) {
 
         master[table].create({ data })
 
-        res.status(201).send('Appointment created')
+        res.status(201).send({ apptid: data.apptid })
     } catch (e) {
         res.status(500).send(e)
     }
