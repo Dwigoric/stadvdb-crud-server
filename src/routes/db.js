@@ -9,20 +9,21 @@ const { PrismaClient } = prismaClientPkg
 const router = Router()
 
 // ------ Set up Prisma clients ------
-// Connector for the master node (write operations)
-const master = new PrismaClient({ datasources: { db: { url: process.env.MASTER_URL } } })
-// Connector for Luzon
-const readLuzon = new PrismaClient({ datasources: { db: { url: process.env.LUZON_URL } } })
-// Connector for Vismin
-const readVismin = new PrismaClient({ datasources: { db: { url: process.env.VISMIN_URL } } })
+// Connector for Node 1
+const node1 = new PrismaClient({ datasources: { db: { url: process.env.NODE1_URL } } })
+// Connector for Node 2
+const node2 = new PrismaClient({ datasources: { db: { url: process.env.NODE2_URL } } })
+// Connector for Node 3
+const node3 = new PrismaClient({ datasources: { db: { url: process.env.NODE3_URL } } })
 // Source: https://github.com/prisma/prisma/issues/2443#issuecomment-630679118
 
 // Set up availability flags
-let masterAvailable = true
-let luzonAvailable = true
-let visminAvailable = true
+let node1Available = true
+let node2Available = true
+let node3Available = true
 
 // Check status of nodes
+let defaultNode = null
 const intervals = new Set()
 
 await checkNodes()
@@ -54,130 +55,32 @@ const generateRandomID = () => {
 // Check status
 router.get('/status', function(req, res) {
     res.status(200).send({
-        master: masterAvailable,
-        luzon: luzonAvailable,
-        vismin: visminAvailable
+        node1: node1Available,
+        node2: node2Available,
+        node3: node3Available
     })
 })
 
-// Get Luzon appointments
-router.get('/appointments/luzon', async function(req, res) {
-    const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
-    const page = req.query.page ? parseInt(req.query.page) : 0
-
-    const luzonNode = getReadNode('luzon')
-
-    if (!luzonNode) {
-        res.status(503).send('Data is currently unavailable')
-        return
-    }
-
-    try {
-        const appointments = await luzonNode.appointments_luzon.findMany({
-            take: itemsPerPage,
-            skip: page * itemsPerPage
-        })
-
-        res.status(200).send(appointments)
-    } catch (e) {
-        res.status(500).send(e)
-    }
-})
-
-// Get total size of Luzon appointments
-router.get('/appointments/luzon/size', async function(req, res) {
-    const luzonNode = getReadNode('luzon')
-
-    if (!luzonNode) {
-        res.status(503).send('Data is currently unavailable')
-        return
-    }
-
-    try {
-        const size = await luzonNode.appointments_luzon.count()
-
-        res.status(200).send({ size })
-    } catch (e) {
-        res.status(500).send(e)
-    }
-})
-
-// Get Vismin appointments
-router.get('/appointments/vismin', async function(req, res) {
-    const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
-    const page = req.query.page ? parseInt(req.query.page) : 0
-
-    const visminNode = getReadNode('vismin')
-
-    if (!visminNode) {
-        res.status(503).send('Data is currently unavailable')
-        return
-    }
-
-    try {
-        const appointments = await visminNode.appointments_vismin.findMany({
-            take: itemsPerPage,
-            skip: page * itemsPerPage
-        })
-
-        res.status(200).send(appointments)
-    } catch (e) {
-        res.status(500).send(e)
-    }
-})
-
-// Get total size of Vismin appointments
-router.get('/appointments/vismin/size', async function(req, res) {
-    const visminNode = getReadNode('vismin')
-
-    if (!visminNode) {
-        res.status(503).send('Data is currently unavailable')
-        return
-    }
-
-    try {
-        const size = await visminNode.appointments_vismin.count()
-
-        res.status(200).send({ size })
-    } catch (e) {
-        res.status(500).send(e)
-    }
-})
-
-// Get appointments from both Luzon and Vismin
+// Get appointment
 router.get('/appointments', async function(req, res) {
-    const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
-    const page = req.query.page ? parseInt(req.query.page) : 0
-
-    const luzonNode = getReadNode('luzon')
-    const visminNode = getReadNode('vismin')
-
-    if (!luzonNode || !visminNode) {
+    // If no nodes are available, return 503
+    if (!node1Available && !node2Available && !node3Available) {
         res.status(503).send('Data is currently unavailable')
         return
     }
+
+    const itemsPerPage = req.query.itemsPerPage ? parseInt(req.query.itemsPerPage) : 10
+    const page = req.query.page ? parseInt(req.query.page) : 0
+    const preferredNode = req.query.node ? parseInt(req.query.node) : null
+
+    const node = getNode(preferredNode)
 
     try {
         // Collect from both Luzon and Vismin
-        let appointments = await Promise.all([
-            luzonNode.appointments_luzon.findMany({
-                take: itemsPerPage,
-                skip: page * itemsPerPage
-            }),
-            visminNode.appointments_vismin.findMany({
-                take: itemsPerPage,
-                skip: page * itemsPerPage
-            })
-        ])
-
-        // Merge the two arrays
-        appointments = appointments[0].concat(appointments[1])
-
-        // Sort appointments apptid
-        appointments.sort((a, b) => a.apptid.localeCompare(b.apptid))
-
-        // Only take the first itemsPerPage elements
-        appointments = appointments.slice(0, itemsPerPage)
+        const appointments = await node.appointments.findMany({
+            take: itemsPerPage,
+            skip: page * itemsPerPage
+        })
 
         res.status(200).send(appointments)
     } catch (e) {
@@ -187,22 +90,17 @@ router.get('/appointments', async function(req, res) {
 
 // Get total size of appointments from both Luzon and Vismin
 router.get('/appointments/size', async function(req, res) {
-    const luzonNode = getReadNode('luzon')
-    const visminNode = getReadNode('vismin')
-
-    if (!luzonNode || !visminNode) {
+    // If no nodes are available, return 503
+    if (!node1Available && !node2Available && !node3Available) {
         res.status(503).send('Data is currently unavailable')
         return
     }
 
-    try {
-        // Collect from both Luzon and Vismin
-        const sizes = await Promise.all([
-            luzonNode.appointments_luzon.count(),
-            visminNode.appointments_vismin.count()
-        ])
+    const preferredNode = req.query.node ? parseInt(req.query.node) : null
+    const node = getNode(preferredNode)
 
-        const size = sizes.reduce((acc, curr) => acc + curr, 0)
+    try {
+        const size = await node.appointments.count()
 
         res.status(200).send({ size })
     } catch (e) {
@@ -212,30 +110,21 @@ router.get('/appointments/size', async function(req, res) {
 
 // Get an appointment
 router.get('/appointment/:id', async function(req, res) {
-    const luzonNode = getReadNode('luzon')
-    const visminNode = getReadNode('vismin')
-
-    if (!luzonNode || !visminNode) {
+    // If no nodes are available, return 503
+    if (!node1Available && !node2Available && !node3Available) {
         res.status(503).send('Data is currently unavailable')
         return
     }
 
+    const preferredNode = req.query.node ? parseInt(req.query.node) : null
+    const node = getNode(preferredNode)
+
     try {
-        // Find it in Vismin first because it has less data
-        let appointment = await visminNode.appointments_vismin.findUnique({
+        const appointment = await node.appointments.findUnique({
             where: {
                 apptid: req.params.id
             }
         })
-
-        if (!appointment) {
-            // Find it in Luzon
-            appointment = await luzonNode.appointments_luzon.findUnique({
-                where: {
-                    apptid: req.params.id
-                }
-            })
-        }
 
         if (!appointment) {
             res.status(404).send('Appointment not found')
@@ -250,50 +139,24 @@ router.get('/appointment/:id', async function(req, res) {
 
 // Create a new appointment
 router.put('/appointment', async function(req, res) {
+    // If no nodes are available, return 503
+    if (!node1Available && !node2Available && !node3Available) {
+        res.status(503).send('Data updates are currently unavailable')
+        return
+    }
+
+    const preferredNode = req.body.node ? parseInt(req.body.node) : null
+    const node = getNode(preferredNode)
+
     try {
-        // If master is not available, return 503
-        if (!masterAvailable) {
-            res.status(503).send('Data updates are currently unavailable')
-            return
-        }
+        const apptid = generateRandomID()
 
-        const {
-            pxid,
-            clinicid,
-            doctorid,
-            status,
-            TimeQueued,
-            QueueDate,
-            StartTime,
-            EndTime,
-            type,
-            isVirtual,
-            City,
-            Province,
-            RegionName
-        } = req.body
-        const data = {
-            apptid: generateRandomID(),
-            pxid,
-            clinicid,
-            doctorid,
-            status,
-            TimeQueued,
-            QueueDate,
-            StartTime,
-            EndTime,
-            type,
-            isVirtual,
-            City,
-            Province,
-            RegionName
-        }
+        const { data } = req.body
+        data.apptid = apptid
 
-        const table = regionsInLuzon.includes(RegionName) ? 'appointments_luzon' : 'appointments_vismin'
+        node.appointments.create({ data })
 
-        master[table].create({ data })
-
-        res.status(201).send({ apptid: data.apptid })
+        res.status(201).send({ apptid })
     } catch (e) {
         res.status(500).send(e)
     }
@@ -301,89 +164,35 @@ router.put('/appointment', async function(req, res) {
 
 // Update an appointment
 router.patch('/appointment/:id', async function(req, res) {
-    try {
-        // If master is not available, return 503
-        if (!masterAvailable) {
-            res.status(503).send('Data updates are currently unavailable')
-            return
-        }
+    // If no nodes are available, return 503
+    if (!node1Available && !node2Available && !node3Available) {
+        res.status(503).send('Data updates are currently unavailable')
+        return
+    }
 
-        const {
-            status,
-            TimeQueued,
-            QueueDate,
-            StartTime,
-            EndTime,
-            type,
-            isVirtual,
-            City,
-            Province,
-            RegionName
-        } = req.body
-        const data = {
-            status,
-            TimeQueued,
-            QueueDate,
-            StartTime,
-            EndTime,
-            type,
-            isVirtual,
-            City,
-            Province,
-            RegionName
-        }
+    const preferredNode = req.body.node ? parseInt(req.body.node) : null
+    const node = getNode(preferredNode)
+
+    try {
+        const { data } = req.body
 
         // Check if appointment exists
-        let appointment = await master.appointments_luzon.findUnique({
+        const appointment = await node.appointments.findUnique({
             where: {
                 apptid: req.params.id
             }
         })
 
         if (!appointment) {
-            appointment = await master.appointments_vismin.findUnique({
-                where: {
-                    apptid: req.params.id
-                }
-            })
-        }
-
-        if (!appointment) {
             res.status(404).send('Appointment not found')
             return
         }
 
-        // Check if the RegionName has changed between Luzon and Vismin
-        if (appointment.RegionName !== RegionName) {
-            // If the new region is from the other region,
-            // delete the entry from the old region and create a new one in the new region
-            const oldTable = regionsInLuzon.includes(appointment.RegionName) ? 'appointments_luzon' : 'appointments_vismin'
-            const newTable = regionsInLuzon.includes(RegionName) ? 'appointments_luzon' : 'appointments_vismin'
-
-            if (oldTable === newTable) {
-                // If the region is the same, just update the entry
-                await master[oldTable].update({
-                    where: { apptid: req.params.id },
-                    data
-                })
-            } else {
-                // Delete the old appointment
-                await master[oldTable].delete({
-                    where: { apptid: req.params.id }
-                })
-
-                // Create a new appointment
-                await master[newTable].create({ data })
-            }
-        } else {
-            // Update the appointment
-            const table = regionsInLuzon.includes(RegionName) ? 'appointments_luzon' : 'appointments_vismin'
-
-            await master[table].update({
-                where: { apptid: req.params.id },
-                data
-            })
-        }
+        // Update the appointment
+        await node.appointments.update({
+            where: { apptid: req.params.id },
+            data
+        })
 
         res.status(200).send('Appointment updated')
     } catch (e) {
@@ -393,26 +202,21 @@ router.patch('/appointment/:id', async function(req, res) {
 
 // Delete an appointment
 router.delete('/appointment/:id', async function(req, res) {
-    try {
-        // If master is not available, return 503
-        if (!masterAvailable) {
-            res.status(503).send('Data updates are currently unavailable')
-            return
-        }
+    // If no nodes are available, return 503
+    if (!node1Available && !node2Available && !node3Available) {
+        res.status(503).send('Data updates are currently unavailable')
+        return
+    }
 
-        const appointment = await master.appointments_luzon.delete({
+    const preferredNode = req.body.node ? parseInt(req.body.node) : null
+    const node = getNode(preferredNode)
+
+    try {
+        await node.appointments.delete({
             where: {
                 apptid: req.params.id
             }
         })
-
-        if (!appointment) {
-            await master.appointments_vismin.delete({
-                where: {
-                    apptid: req.params.id
-                }
-            })
-        }
 
         res.status(200).send('Appointment deleted')
     } catch (e) {
@@ -423,50 +227,50 @@ router.delete('/appointment/:id', async function(req, res) {
 export default router
 
 async function checkNodes() {
-    // Check Master
+    const availableNodes = []
+
+    // Check Node 1
     try {
-        await master.$queryRaw`SELECT 1`
-        // Stay on Master
-        masterAvailable = true
+        await node1.$queryRaw`SELECT 1`
+        node1Available = true
+        availableNodes.push(node1)
     } catch (e) {
         debug('Master is down')
         debug(e)
-
-        masterAvailable = false
-        // Revert to Luzon and Vismin replicas
-        luzonAvailable = true
-        visminAvailable = true
+        node1Available = false
     }
 
-    // Check Luzon, fallback to Master
+    // Check Node 2
     try {
-        await readLuzon.$queryRaw`SELECT 1`
-        // Stay/switch to Luzon
-        luzonAvailable = true
+        await node2.$queryRaw`SELECT 1`
+        node2Available = true
+        availableNodes.push(node2)
     } catch (e) {
         debug('Luzon is down')
         debug(e)
-        luzonAvailable = false
+        node2Available = false
     }
 
-    // Check Vismin, fallback to Master
+    // Check Node 3
     try {
-        await readVismin.$queryRaw`SELECT 1`
-        // Stay/switch to Vismin
-        visminAvailable = true
+        await node3.$queryRaw`SELECT 1`
+        node3Available = true
+        availableNodes.push(node3)
     } catch (e) {
         debug('Vismin is down')
         debug(e)
-        visminAvailable = false
+        node3Available = false
     }
+
+    // Set default node randomly
+    defaultNode = availableNodes[Math.floor(Math.random() * availableNodes.length)]
 }
 
-function getReadNode(region) {
-    if (region === 'luzon') {
-        return luzonAvailable ? readLuzon : masterAvailable ? master : null
-    } else if (region === 'vismin') {
-        return visminAvailable ? readVismin : masterAvailable ? master : null
-    } else {
-        return null
-    }
+function getNode(preferredNode) {
+    let node = defaultNode
+    if (preferredNode === 1 && node1Available) node = node1
+    else if (preferredNode === 2 && node2Available) node = node2
+    else if (preferredNode === 3 && node3Available) node = node3
+
+    return node
 }
