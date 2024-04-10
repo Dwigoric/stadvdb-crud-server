@@ -240,13 +240,10 @@ router.delete('/appointments/:id', async function(req, res) {
 export default router
 
 async function checkNodes() {
-    const availableNodes = []
-
     // Check Node 1
     try {
         await node1.$queryRaw`SELECT 1`
         node1Available = true
-        availableNodes.push(node1)
     } catch (e) {
         debug('Node 1 down')
         debug(e)
@@ -257,7 +254,6 @@ async function checkNodes() {
     try {
         await node2.$queryRaw`SELECT 1`
         node2Available = true
-        availableNodes.push(node2)
     } catch (e) {
         debug('Node 2 down')
         debug(e)
@@ -268,15 +264,24 @@ async function checkNodes() {
     try {
         await node3.$queryRaw`SELECT 1`
         node3Available = true
-        availableNodes.push(node3)
     } catch (e) {
         debug('Node 3 down')
         debug(e)
         node3Available = false
     }
 
-    // Set default node randomly
-    defaultNode = availableNodes[Math.floor(Math.random() * availableNodes.length)]
+    setDefaultNode()
+}
+
+function setDefaultNode() {
+    const nodes = []
+
+    if (node1Available) nodes.push(node1)
+    if (node2Available) nodes.push(node2)
+    if (node3Available) nodes.push(node3)
+
+    defaultNode = nodes.length > 0 ? nodes[Math.floor(Math.random() * nodes.length)] : null
+    return defaultNode
 }
 
 function getNode(preferredNode) {
