@@ -109,7 +109,7 @@ router.get('/appointments/size', async function(req, res) {
 })
 
 // Get an appointment
-router.get('/appointment/:id', async function(req, res) {
+router.get('/appointments/:id', async function(req, res) {
     // If no nodes are available, return 503
     if (!node1Available && !node2Available && !node3Available) {
         res.status(503).send('Data is currently unavailable')
@@ -138,7 +138,7 @@ router.get('/appointment/:id', async function(req, res) {
 })
 
 // Create a new appointment
-router.put('/appointment', async function(req, res) {
+router.put('/appointments', async function(req, res) {
     // If no nodes are available, return 503
     if (!node1Available && !node2Available && !node3Available) {
         res.status(503).send('Data updates are currently unavailable')
@@ -163,7 +163,7 @@ router.put('/appointment', async function(req, res) {
 })
 
 // Update an appointment
-router.patch('/appointment/:id', async function(req, res) {
+router.patch('/appointments/:id', async function(req, res) {
     // If no nodes are available, return 503
     if (!node1Available && !node2Available && !node3Available) {
         res.status(503).send('Data updates are currently unavailable')
@@ -201,7 +201,7 @@ router.patch('/appointment/:id', async function(req, res) {
 })
 
 // Delete an appointment
-router.delete('/appointment/:id', async function(req, res) {
+router.delete('/appointments/:id', async function(req, res) {
     // If no nodes are available, return 503
     if (!node1Available && !node2Available && !node3Available) {
         res.status(503).send('Data updates are currently unavailable')
