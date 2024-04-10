@@ -224,7 +224,7 @@ async function checkNodes() {
         node1Available = true
         availableNodes.push(node1)
     } catch (e) {
-        debug('Master is down')
+        debug('Node 1 down')
         debug(e)
         node1Available = false
     }
@@ -235,7 +235,7 @@ async function checkNodes() {
         node2Available = true
         availableNodes.push(node2)
     } catch (e) {
-        debug('Luzon is down')
+        debug('Node 2 down')
         debug(e)
         node2Available = false
     }
@@ -246,7 +246,7 @@ async function checkNodes() {
         node3Available = true
         availableNodes.push(node3)
     } catch (e) {
-        debug('Vismin is down')
+        debug('Node 3 down')
         debug(e)
         node3Available = false
     }
