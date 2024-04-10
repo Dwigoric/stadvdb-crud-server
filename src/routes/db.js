@@ -65,13 +65,15 @@ router.get('/appointments', async function(req, res) {
     const node = getNode(preferredNode)
 
     try {
-        // Collect from both Luzon and Vismin
-        const appointments = await node.appointments.findMany({
-            take: itemsPerPage,
-            skip: page * itemsPerPage
-        })
+        await attemptAction(node, async (node) => {
+            // Collect from both Luzon and Vismin
+            const appointments = await node.appointments.findMany({
+                take: itemsPerPage,
+                skip: page * itemsPerPage
+            })
 
-        res.status(200).send(appointments)
+            res.status(200).send(appointments)
+        })
     } catch (e) {
         res.status(500).send(e)
         debug(e)
@@ -90,9 +92,10 @@ router.get('/appointments/size', async function(req, res) {
     const node = getNode(preferredNode)
 
     try {
-        const size = await node.appointments.count()
-
-        res.status(200).send({ size })
+        await attemptAction(node, async (node) => {
+            const size = await node.appointments.count()
+            res.status(200).send({ size })
+        })
     } catch (e) {
         res.status(500).send(e)
         debug(e)
@@ -111,18 +114,20 @@ router.get('/appointments/:id', async function(req, res) {
     const node = getNode(preferredNode)
 
     try {
-        const appointment = await node.appointments.findUnique({
-            where: {
-                apptid: req.params.id
+        await attemptAction(node, async (node) => {
+            const appointment = await node.appointments.findUnique({
+                where: {
+                    apptid: req.params.id
+                }
+            })
+
+            if (!appointment) {
+                res.status(404).send('Appointment not found')
+                return
             }
+
+            res.status(200).send(appointment)
         })
-
-        if (!appointment) {
-            res.status(404).send('Appointment not found')
-            return
-        }
-
-        res.status(200).send(appointment)
     } catch (e) {
         res.status(500).send(e)
         debug(e)
@@ -137,27 +142,28 @@ router.put('/appointments', async function(req, res) {
         return
     }
 
+    const apptid = generateRandomID()
+
+    const { data } = req.body
+    data.apptid = apptid
+
+    // Replace with actual Date objects
+    data.TimeQueued = new Date(data.TimeQueued)
+    data.QueueDate = new Date(data.QueueDate)
+    data.StartTime = new Date(data.StartTime)
+    data.EndTime = new Date(data.EndTime)
+
+    // Replace boolean isVirtual with title-cased string
+    data.isVirtual = data.isVirtual ? 'True' : 'False'
+
     const preferredNode = req.body.node ? parseInt(req.body.node) : null
     const node = getNode(preferredNode)
 
     try {
-        const apptid = generateRandomID()
-
-        const { data } = req.body
-        data.apptid = apptid
-
-        // Replace with actual Date objects
-        data.TimeQueued = new Date(data.TimeQueued)
-        data.QueueDate = new Date(data.QueueDate)
-        data.StartTime = new Date(data.StartTime)
-        data.EndTime = new Date(data.EndTime)
-
-        // Replace boolean isVirtual with title-cased string
-        data.isVirtual = data.isVirtual ? 'True' : 'False'
-
-        node.appointments.create({ data })
-
-        res.status(201).send({ apptid })
+        await attemptAction(node, async (node) => {
+            await node.appointments.create({ data })
+            res.status(201).send({ apptid })
+        })
     } catch (e) {
         res.status(500).send(e)
         debug(e)
@@ -172,40 +178,42 @@ router.patch('/appointments/:id', async function(req, res) {
         return
     }
 
+    const { data } = req.body
+
     const preferredNode = req.body.node ? parseInt(req.body.node) : null
     const node = getNode(preferredNode)
 
     try {
-        const { data } = req.body
+        await attemptAction(node, async (node) => {
+            // Check if appointment exists
+            const appointment = await node.appointments.findUnique({
+                where: {
+                    apptid: req.params.id
+                }
+            })
 
-        // Check if appointment exists
-        const appointment = await node.appointments.findUnique({
-            where: {
-                apptid: req.params.id
+            if (!appointment) {
+                res.status(404).send('Appointment not found')
+                return
             }
+
+            // Replace with actual Date objects
+            data.TimeQueued = new Date(data.TimeQueued)
+            data.QueueDate = new Date(data.QueueDate)
+            data.StartTime = new Date(data.StartTime)
+            data.EndTime = new Date(data.EndTime)
+
+            // Replace boolean isVirtual with title-cased string
+            data.isVirtual = data.isVirtual ? 'True' : 'False'
+
+            // Update the appointment
+            await node.appointments.update({
+                where: { apptid: req.params.id },
+                data
+            })
+
+            res.status(200).send('Appointment updated')
         })
-
-        if (!appointment) {
-            res.status(404).send('Appointment not found')
-            return
-        }
-
-        // Replace with actual Date objects
-        data.TimeQueued = new Date(data.TimeQueued)
-        data.QueueDate = new Date(data.QueueDate)
-        data.StartTime = new Date(data.StartTime)
-        data.EndTime = new Date(data.EndTime)
-
-        // Replace boolean isVirtual with title-cased string
-        data.isVirtual = data.isVirtual ? 'True' : 'False'
-
-        // Update the appointment
-        await node.appointments.update({
-            where: { apptid: req.params.id },
-            data
-        })
-
-        res.status(200).send('Appointment updated')
     } catch (e) {
         res.status(500).send(e)
         debug(e)
@@ -224,13 +232,15 @@ router.delete('/appointments/:id', async function(req, res) {
     const node = getNode(preferredNode)
 
     try {
-        await node.appointments.delete({
-            where: {
-                apptid: req.params.id
-            }
-        })
+        await attemptAction(node, async (node) => {
+            await node.appointments.delete({
+                where: {
+                    apptid: req.params.id
+                }
+            })
 
-        res.status(200).send('Appointment deleted')
+            res.status(200).send('Appointment deleted')
+        })
     } catch (e) {
         res.status(500).send(e)
         debug(e)
@@ -282,6 +292,35 @@ function setDefaultNode() {
 
     defaultNode = nodes.length > 0 ? nodes[Math.floor(Math.random() * nodes.length)] : null
     return defaultNode
+}
+
+async function attemptAction(node, action) {
+    const nodes = [node]
+    let failureCount = 0
+
+    // Add other available nodes
+    if (node1Available && node1 !== node) nodes.push(node1)
+    if (node2Available && node2 !== node) nodes.push(node2)
+    if (node3Available && node3 !== node) nodes.push(node3)
+
+    for (const node of nodes) {
+        try {
+            await action(node)
+            break
+        } catch (e) {
+            debug(e)
+            // Mark node as unavailable
+            failureCount++
+            if (node === node1) node1Available = false
+            else if (node === node2) node2Available = false
+            else if (node === node3) node3Available = false
+        }
+    }
+
+    setDefaultNode()
+
+    // Throw error if all nodes failed
+    if (failureCount === nodes.length) throw new Error('All nodes are unavailable')
 }
 
 function getNode(preferredNode) {
