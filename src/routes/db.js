@@ -30,17 +30,6 @@ await checkNodes()
 intervals.add(setInterval(checkNodes, 5_000)) // every 5 seconds
 
 // Constants
-const regionsInLuzon = [
-    'National Capital Region (NCR)',
-    'CALABARZON (IV-A)',
-    'Ilocos Region (I)',
-    'Cagayan Valley (II)',
-    'Central Luzon (III)',
-    'MIMAROPA (IV-B)',
-    'Bicol Region (V)',
-    'Cordillera Administrative Region (CAR)'
-]
-
 const generateRandomID = () => {
     let id = ''
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
