@@ -4,7 +4,7 @@ import debugLogger from 'debug'
 import prismaClientPkg from '@prisma/client'
 
 const debug = debugLogger('mco2-server-app:db')
-const { PrismaClient } = prismaClientPkg
+const { Prisma, PrismaClient } = prismaClientPkg
 
 const router = Router()
 
@@ -305,7 +305,7 @@ async function attemptAction(node, action) {
 
     for (const node of nodes) {
         try {
-            await action(node)
+            await node.$transaction(action, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
             break
         } catch (e) {
             debug(e)
