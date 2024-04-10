@@ -23,4 +23,5 @@ model appointments {
   City       String?   @db.Text
   Province   String?   @db.Text
   RegionName String?   @db.VarChar(255)
+  version Int @default(0)
 }

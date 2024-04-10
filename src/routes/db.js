@@ -207,9 +207,14 @@ router.patch('/appointments/:id', async function(req, res) {
             data.isVirtual = data.isVirtual ? 'True' : 'False'
 
             // Update the appointment
-            await node.appointments.update({
-                where: { apptid: req.params.id },
-                data
+            await node.appointments.updateMany({
+                where: { apptid: req.params.id, version: appointment.version },
+                data: {
+                    ...data,
+                    version: {
+                        increment: 1
+                    }
+                }
             })
 
             res.status(200).send('Appointment updated')
