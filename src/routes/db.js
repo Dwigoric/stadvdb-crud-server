@@ -74,6 +74,7 @@ router.get('/appointments', async function(req, res) {
         res.status(200).send(appointments)
     } catch (e) {
         res.status(500).send(e)
+        debug(e)
     }
 })
 
@@ -94,6 +95,7 @@ router.get('/appointments/size', async function(req, res) {
         res.status(200).send({ size })
     } catch (e) {
         res.status(500).send(e)
+        debug(e)
     }
 })
 
@@ -123,6 +125,7 @@ router.get('/appointments/:id', async function(req, res) {
         res.status(200).send(appointment)
     } catch (e) {
         res.status(500).send(e)
+        debug(e)
     }
 })
 
@@ -148,6 +151,7 @@ router.put('/appointments', async function(req, res) {
         res.status(201).send({ apptid })
     } catch (e) {
         res.status(500).send(e)
+        debug(e)
     }
 })
 
@@ -186,6 +190,7 @@ router.patch('/appointments/:id', async function(req, res) {
         res.status(200).send('Appointment updated')
     } catch (e) {
         res.status(500).send(e)
+        debug(e)
     }
 })
 
@@ -210,6 +215,7 @@ router.delete('/appointments/:id', async function(req, res) {
         res.status(200).send('Appointment deleted')
     } catch (e) {
         res.status(500).send(e)
+        debug(e)
     }
 })
 
