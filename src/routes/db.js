@@ -146,6 +146,15 @@ router.put('/appointments', async function(req, res) {
         const { data } = req.body
         data.apptid = apptid
 
+        // Replace with actual Date objects
+        data.TimeQueued = new Date(data.TimeQueued)
+        data.QueueDate = new Date(data.QueueDate)
+        data.StartTime = new Date(data.StartTime)
+        data.EndTime = new Date(data.EndTime)
+
+        // Replace boolean isVirtual with title-cased string
+        data.isVirtual = data.isVirtual ? 'True' : 'False'
+
         node.appointments.create({ data })
 
         res.status(201).send({ apptid })
@@ -180,6 +189,15 @@ router.patch('/appointments/:id', async function(req, res) {
             res.status(404).send('Appointment not found')
             return
         }
+
+        // Replace with actual Date objects
+        data.TimeQueued = new Date(data.TimeQueued)
+        data.QueueDate = new Date(data.QueueDate)
+        data.StartTime = new Date(data.StartTime)
+        data.EndTime = new Date(data.EndTime)
+
+        // Replace boolean isVirtual with title-cased string
+        data.isVirtual = data.isVirtual ? 'True' : 'False'
 
         // Update the appointment
         await node.appointments.update({
