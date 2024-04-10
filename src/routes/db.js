@@ -18,9 +18,9 @@ const node3 = new PrismaClient({ datasources: { db: { url: process.env.NODE3_URL
 // Source: https://github.com/prisma/prisma/issues/2443#issuecomment-630679118
 
 // Set up availability flags
-let node1Available = true
-let node2Available = true
-let node3Available = true
+let node1Available = false
+let node2Available = false
+let node3Available = false
 
 // Check status of nodes
 let defaultNode = null
